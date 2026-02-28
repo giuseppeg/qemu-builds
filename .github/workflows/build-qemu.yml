@@ -1,0 +1,104 @@
+name: Build QEMU
+
+on:
+  workflow_dispatch:
+    inputs:
+      qemu_version:
+        description: "QEMU version to build (e.g. 8.2.1)"
+        required: false
+  release:
+    types: [published]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: darwin
+            arch: arm64
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read QEMU version
+        id: qemu_version
+        run: |
+          INPUT_VERSION="${{ inputs.qemu_version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$(echo "$INPUT_VERSION" | tr -d '[:space:]')"
+            if ! echo "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+              echo "Invalid qemu_version input: '$INPUT_VERSION'. Use a numeric version like 10.2.1." >&2
+              exit 1
+            fi
+            echo "qemu_version=$VERSION" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ ! -f scripts/qemu/version.txt ]; then
+            echo "scripts/qemu/version.txt not found" >&2
+            exit 1
+          fi
+          VERSION="$(cat scripts/qemu/version.txt | tr -d '[:space:]')"
+          if [ -z "$VERSION" ]; then
+            echo "scripts/qemu/version.txt is empty" >&2
+            exit 1
+          fi
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+            echo "scripts/qemu/version.txt must contain a numeric version like 10.2.1." >&2
+            exit 1
+          fi
+          echo "qemu_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libglib2.0-dev \
+            libpixman-1-dev \
+            zlib1g-dev \
+            libffi-dev \
+            python3 \
+            ninja-build
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install pkg-config glib pixman ninja
+
+      - name: Build QEMU
+        env:
+          QEMU_VERSION: ${{ steps.qemu_version.outputs.qemu_version }}
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+          OUTPUT_DIR: dist/qemu
+        run: |
+          ./scripts/qemu/build.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/qemu/*
+
+  release:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/qemu
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" dist/qemu/** --clobber
