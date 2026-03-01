@@ -89,7 +89,7 @@ jobs:
           path: dist/qemu/*
 
   release:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-24.04
     steps:
