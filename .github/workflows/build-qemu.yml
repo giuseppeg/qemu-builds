@@ -6,6 +6,9 @@ on:
       qemu_version:
         description: "QEMU version to build (e.g. 8.2.1)"
         required: false
+      release_tag:
+        description: "Release tag to upload assets to (defaults to v<qemu_version>)"
+        required: false
   release:
     types: [published]
 
@@ -97,9 +100,37 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist/qemu
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          INPUT_TAG="${{ inputs.release_tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$(echo "$INPUT_TAG" | tr -d '[:space:]')"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          VERSION="${{ inputs.qemu_version }}"
+          VERSION="$(echo "$VERSION" | tr -d '[:space:]')"
+          if [ -z "$VERSION" ]; then
+            echo "release_tag or qemu_version is required for manual runs" >&2
+            exit 1
+          fi
+
+          if echo "$VERSION" | grep -Eq '^v'; then
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" dist/qemu/** --clobber
+          gh release upload "${RELEASE_TAG}" dist/qemu/** --clobber
