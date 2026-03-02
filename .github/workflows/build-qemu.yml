@@ -133,7 +133,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
         run: |
-          ASSETS="$(find dist/qemu -type f \\( -name 'vibebox-qemu-*.tar.gz' -o -name 'vibebox-qemu-*.tar.gz.sha256' \\))"
+          ASSETS="$(find dist/qemu -type f \( -name 'vibebox-qemu-*.tar.gz' -o -name 'vibebox-qemu-*.tar.gz.sha256' \))"
           if [ -z "$ASSETS" ]; then
             echo "No release assets found under dist/qemu" >&2
             exit 1
