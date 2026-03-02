@@ -20,6 +20,7 @@ The script produces:
 The archive contains:
 - `qemu-system-*` for the target arch
 - `qemu-img`
+- `lib/` shared libraries for a standalone bundle
 
 ## Release flow
 

@@ -70,6 +70,7 @@ jobs:
             libpixman-1-dev \
             zlib1g-dev \
             libffi-dev \
+            patchelf \
             python3 \
             ninja-build
 
