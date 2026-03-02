@@ -17,6 +17,10 @@ The script produces:
 - `vibebox-qemu-<version>-<platform>-<arch>.tar.gz`
 - `vibebox-qemu-<version>-<platform>-<arch>.tar.gz.sha256`
 
+The archive contains:
+- `qemu-system-*` for the target arch
+- `qemu-img`
+
 ## Release flow
 
 1. Set `scripts/qemu/version.txt` to the QEMU version you want to pin.

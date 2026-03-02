@@ -26,11 +26,13 @@ case "$ARCH" in
     ARCH_LABEL="arm64"
     QEMU_TARGET="aarch64-softmmu"
     QEMU_BINARY="qemu-system-aarch64"
+    QEMU_IMG_BINARY="qemu-img"
     ;;
   x86_64|amd64|x64)
     ARCH_LABEL="x64"
     QEMU_TARGET="x86_64-softmmu"
     QEMU_BINARY="qemu-system-x86_64"
+    QEMU_IMG_BINARY="qemu-img"
     ;;
   *)
     echo "Unsupported arch: $ARCH" >&2
@@ -102,14 +104,30 @@ if [[ ! -f "$BIN_PATH" ]]; then
   BIN_PATH="$FOUND"
 fi
 
+IMG_PATH="$(pwd)/build/$QEMU_IMG_BINARY"
+if [[ ! -f "$IMG_PATH" ]]; then
+  IMG_PATH="$(pwd)/$QEMU_IMG_BINARY"
+fi
+
+if [[ ! -f "$IMG_PATH" ]]; then
+  FOUND_IMG="$(find "$(pwd)" -maxdepth 2 -type f -name "${QEMU_IMG_BINARY}*" | head -n 1 || true)"
+  if [[ -z "$FOUND_IMG" ]]; then
+    echo "QEMU img binary not found after build: $QEMU_IMG_BINARY" >&2
+    exit 1
+  fi
+  IMG_PATH="$FOUND_IMG"
+fi
+
 OUT_NAME="vibebox-qemu-${QEMU_VERSION}-${PLATFORM}-${ARCH_LABEL}.tar.gz"
 STAGING="$WORK_DIR/staging"
 mkdir -p "$STAGING"
 cp "$BIN_PATH" "$STAGING/$QEMU_BINARY"
+cp "$IMG_PATH" "$STAGING/$QEMU_IMG_BINARY"
 
 chmod +x "$STAGING/$QEMU_BINARY"
+chmod +x "$STAGING/$QEMU_IMG_BINARY"
 
-tar -czf "$OUTPUT_DIR/$OUT_NAME" -C "$STAGING" "$QEMU_BINARY"
+tar -czf "$OUTPUT_DIR/$OUT_NAME" -C "$STAGING" "$QEMU_BINARY" "$QEMU_IMG_BINARY"
 
 if command -v shasum >/dev/null 2>&1; then
   (cd "$OUTPUT_DIR" && shasum -a 256 "$OUT_NAME" > "$OUT_NAME.sha256")
