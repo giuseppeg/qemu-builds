@@ -186,6 +186,8 @@ if [[ "$PLATFORM" == "darwin" ]]; then
       done
     done
   fi
+
+  xattr -cr "$STAGING"
 fi
 
 if [[ "$PLATFORM" == "linux" ]]; then
