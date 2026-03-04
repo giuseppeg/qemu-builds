@@ -152,6 +152,7 @@ if [[ "$PLATFORM" == "darwin" ]]; then
       if [[ ! -f "$LIB_DIR/$base" ]]; then
         cp "$dep" "$LIB_DIR/$base"
         chmod +x "$LIB_DIR/$base"
+        copy_macos_deps "$LIB_DIR/$base"
       fi
       install_name_tool -change "$dep" "@rpath/$base" "$bin"
     done
