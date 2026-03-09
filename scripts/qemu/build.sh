@@ -132,6 +132,19 @@ mkdir -p "$LIB_DIR"
 cp "$BIN_PATH" "$STAGING/$QEMU_BINARY"
 cp "$IMG_PATH" "$STAGING/$QEMU_IMG_BINARY"
 
+PC_BIOS_PATH="$(pwd)/pc-bios"
+if [[ ! -d "$PC_BIOS_PATH" ]]; then
+  FOUND_PC_BIOS="$(find "$(pwd)" -maxdepth 3 -type d -name pc-bios | head -n 1 || true)"
+  if [[ -n "$FOUND_PC_BIOS" ]]; then
+    PC_BIOS_PATH="$FOUND_PC_BIOS"
+  fi
+fi
+
+if [[ -d "$PC_BIOS_PATH" ]]; then
+  mkdir -p "$STAGING/share/qemu"
+  find "$PC_BIOS_PATH" -maxdepth 1 -type f -exec cp {} "$STAGING/share/qemu/" \;
+fi
+
 chmod +x "$STAGING/$QEMU_BINARY"
 chmod +x "$STAGING/$QEMU_IMG_BINARY"
 
@@ -219,7 +232,7 @@ if [[ "$PLATFORM" == "linux" ]]; then
   patchelf --set-rpath '$ORIGIN/lib' "$STAGING/$QEMU_IMG_BINARY"
 fi
 
-tar -czf "$OUTPUT_DIR/$OUT_NAME" -C "$STAGING" "$QEMU_BINARY" "$QEMU_IMG_BINARY" lib
+tar -czf "$OUTPUT_DIR/$OUT_NAME" -C "$STAGING" .
 
 if command -v shasum >/dev/null 2>&1; then
   (cd "$OUTPUT_DIR" && shasum -a 256 "$OUT_NAME" > "$OUT_NAME.sha256")

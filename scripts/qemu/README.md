@@ -21,6 +21,12 @@ The archive contains:
 - `qemu-system-*` for the target arch
 - `qemu-img`
 - `lib/` shared libraries for a standalone bundle
+- `share/qemu/` ROM and firmware data copied from QEMU `pc-bios`
+
+Notes:
+- The standalone bundle must include `share/qemu/efi-virtio.rom`. Vibebox uses
+  `virtio-net-pci` on the macOS ARM path and QEMU fails at startup when that
+  ROM data is missing.
 
 ## Release flow
 
