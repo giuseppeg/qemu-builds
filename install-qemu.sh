@@ -43,7 +43,7 @@ IMG_BIN="qemu-img"
 INSTALL_DIR="$PWD/.qemu"
 REPO="g/qemu-builds"
 
-ASSET="vibebox-qemu-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
+ASSET="qemu-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
 SHA_ASSET="${ASSET}.sha256"
 BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
 ARCHIVE_PATH="$(mktemp -t qemu-archive).tar.gz"

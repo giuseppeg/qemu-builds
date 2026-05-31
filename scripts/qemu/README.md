@@ -14,8 +14,8 @@ OUTPUT_DIR=dist/qemu \
 ```
 
 The script produces:
-- `vibebox-qemu-<version>-<platform>-<arch>.tar.gz`
-- `vibebox-qemu-<version>-<platform>-<arch>.tar.gz.sha256`
+- `qemu-<version>-<platform>-<arch>.tar.gz`
+- `qemu-<version>-<platform>-<arch>.tar.gz.sha256`
 
 The archive contains:
 - `qemu-system-*` for the target arch

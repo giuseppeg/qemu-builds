@@ -125,7 +125,7 @@ if [[ "$PLATFORM" == "linux" ]]; then
   fi
 fi
 
-OUT_NAME="vibebox-qemu-${QEMU_VERSION}-${PLATFORM}-${ARCH_LABEL}.tar.gz"
+OUT_NAME="qemu-${QEMU_VERSION}-${PLATFORM}-${ARCH_LABEL}.tar.gz"
 STAGING="$WORK_DIR/staging"
 LIB_DIR="$STAGING/lib"
 mkdir -p "$LIB_DIR"
