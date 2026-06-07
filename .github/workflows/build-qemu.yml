@@ -137,9 +137,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
         run: |
-          ASSETS="$(find dist/qemu -type f \( -name 'vibebox-qemu-*.tar.gz' -o -name 'vibebox-qemu-*.tar.gz.sha256' \))"
-          if [ -z "$ASSETS" ]; then
+          ASSETS=()
+          while IFS= read -r asset; do
+            ASSETS+=("$asset")
+          done < <(find dist/qemu -type f \( -name 'qemu-*.tar.gz' -o -name 'qemu-*.tar.gz.sha256' \))
+          if [ "${#ASSETS[@]}" -eq 0 ]; then
             echo "No release assets found under dist/qemu" >&2
             exit 1
           fi
-          gh release upload "${RELEASE_TAG}" $ASSETS --clobber
+          gh release upload "${RELEASE_TAG}" "${ASSETS[@]}" --clobber
