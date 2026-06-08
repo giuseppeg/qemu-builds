@@ -41,7 +41,7 @@ else
 fi
 IMG_BIN="qemu-img"
 INSTALL_DIR="$PWD/.qemu"
-REPO="g/qemu-builds"
+REPO="giuseppeg/qemu-builds"
 
 ASSET="qemu-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
 SHA_ASSET="${ASSET}.sha256"
