@@ -91,12 +91,38 @@ while IFS= read -r entry; do
     exit 1
   fi
 done < <(tar -tzf "$ARCHIVE_PATH")
+# Validate symlink targets too: a benign entry name can still point outside
+# the install dir. Verbose listing shows "<name> -> <target>" for symlinks.
+while IFS= read -r line; do
+  target="${line#* -> }"
+  [[ "$target" != "$line" ]] || continue
+  if [[ "$target" == /* || "$target" == *".."* ]]; then
+    echo "Unsafe symlink target in archive: $target" >&2
+    exit 1
+  fi
+done < <(tar -tvzf "$ARCHIVE_PATH")
 tar -xzf "$ARCHIVE_PATH" -C "$INSTALL_DIR" --no-same-owner --no-same-permissions
 
+# The archive ships a flat layout but QEMU resolves its bundled datadir as
+# <exec_dir>/../share/qemu, so the binary must sit one level below the install
+# root. Move the binaries and their bundled lib/ into bin/ (rpaths are relative
+# to the binary, so bin/lib keeps working) and leave a compat symlink at the
+# root so callers can keep invoking .qemu/<binary>.
 SYS_PATH="$INSTALL_DIR/$SYS_BIN"
 IMG_PATH="$INSTALL_DIR/$IMG_BIN"
-[[ -x "$SYS_PATH" ]] || { echo "Missing expected system binary: $SYS_PATH" >&2; exit 1; }
-[[ -x "$IMG_PATH" ]] || { echo "Missing expected image binary: $IMG_PATH" >&2; exit 1; }
+SYS_REAL="$INSTALL_DIR/bin/$SYS_BIN"
+IMG_REAL="$INSTALL_DIR/bin/$IMG_BIN"
+if [[ ! -e "$SYS_REAL" ]]; then
+  [[ -x "$SYS_PATH" ]] || { echo "Missing expected system binary: $SYS_PATH" >&2; exit 1; }
+  [[ -x "$IMG_PATH" ]] || { echo "Missing expected image binary: $IMG_PATH" >&2; exit 1; }
+  mkdir -p "$INSTALL_DIR/bin"
+  mv "$SYS_PATH" "$IMG_PATH" "$INSTALL_DIR/bin/"
+  [[ -d "$INSTALL_DIR/lib" ]] && mv "$INSTALL_DIR/lib" "$INSTALL_DIR/bin/lib"
+  ln -s "bin/$SYS_BIN" "$SYS_PATH"
+  ln -s "bin/$IMG_BIN" "$IMG_PATH"
+fi
+[[ -x "$SYS_REAL" ]] || { echo "Missing expected system binary: $SYS_REAL" >&2; exit 1; }
+[[ -x "$IMG_REAL" ]] || { echo "Missing expected image binary: $IMG_REAL" >&2; exit 1; }
 
 if [[ "$PLATFORM" == "darwin" ]]; then
   for cmd in xattr codesign find; do
@@ -105,11 +131,11 @@ if [[ "$PLATFORM" == "darwin" ]]; then
   xattr -dr com.apple.provenance "$INSTALL_DIR" 2>/dev/null || true
   xattr -dr com.apple.quarantine "$INSTALL_DIR" 2>/dev/null || true
 
-  if [[ -d "$INSTALL_DIR/lib" ]]; then
+  if [[ -d "$INSTALL_DIR/bin/lib" ]]; then
     while IFS= read -r -d '' dylib; do
       chmod u+w "$dylib" 2>/dev/null || true
       codesign --force --sign - "$dylib"
-    done < <(find "$INSTALL_DIR/lib" -type f -name '*.dylib' -print0)
+    done < <(find "$INSTALL_DIR/bin/lib" -type f -name '*.dylib' -print0)
   fi
 
   cat > "$ENT_PATH" <<'ENT'
@@ -123,12 +149,12 @@ if [[ "$PLATFORM" == "darwin" ]]; then
 </plist>
 ENT
 
-  chmod u+w "$IMG_PATH" 2>/dev/null || true
-  codesign --force --sign - "$IMG_PATH"
-  chmod u+w "$SYS_PATH" 2>/dev/null || true
-  codesign --force --sign - --entitlements "$ENT_PATH" "$SYS_PATH"
-  codesign --verify --strict --verbose=2 "$IMG_PATH"
-  codesign --verify --strict --verbose=2 "$SYS_PATH"
+  chmod u+w "$IMG_REAL" 2>/dev/null || true
+  codesign --force --sign - "$IMG_REAL"
+  chmod u+w "$SYS_REAL" 2>/dev/null || true
+  codesign --force --sign - --entitlements "$ENT_PATH" "$SYS_REAL"
+  codesign --verify --strict --verbose=2 "$IMG_REAL"
+  codesign --verify --strict --verbose=2 "$SYS_REAL"
 fi
 
 "$IMG_PATH" --version >/dev/null
